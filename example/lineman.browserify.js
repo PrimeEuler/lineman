@@ -6401,10 +6401,7 @@ String.prototype.del = function (idx) {
 function lineman(){
     var text    = {
         buffer:'',
-        cursor:{
-            row:0,
-            column:0
-        }
+        index:0
     }
     var history = {
         buffer:[''],
@@ -6424,9 +6421,18 @@ function lineman(){
             if(self.push(chunk)){callback()}
         }
     })
+        self.silent = false
         keypress( self.io )
-        self.io.on('keypress',     keymap )
-        function keymap(ch, key){
+        
+        self.io.on('keypress',   keymap )
+        self.io.on('mousepress', function(info){
+            self.emit('mousepress',info)
+        })
+        self.io.on('cursor',     function(info){
+            self.emit('cursor',info)
+        })
+        
+        function keymap( ch, key ){
             key = key || { name:'', sequence:'' };
             key.name = key.name || ''
             if( key.ctrl && key.shift ) {
@@ -6448,16 +6454,15 @@ function lineman(){
                 self.emit('edit', key )
             }
             else if( key.name.match(/^(enter|return)$/) ) {
-                self.emit( 'crlf',  JSON.parse(JSON.stringify(text)) ) 
-                if(text.buffer.length > 0){
-                    
-                    
+                
+                
+                if(text.buffer.length > 0 && self.silent===false){
                     history.buffer.push(text.buffer);
                     history.index = history.buffer.length 
-                    
                 }
+                self.emit( 'crlf',  unmarshall(text) ) 
                 text.buffer = '';
-                text.cursor.column = 0;
+                text.index = 0;
             }
             else if( key.sequence.indexOf('\u001b') ===0){
                 self.emit('csi', key )
@@ -6470,10 +6475,11 @@ function lineman(){
                         ch=''
                     }
                 }
-                text.buffer = text.buffer.splice(text.cursor.column,0,ch)
-                text.cursor.column += ch.length
+                text.buffer = text.buffer.splice(text.index,0,ch)
+                text.index += ch.length
             }
-            self.emit('keypress',text)
+            if(self.silent===false)
+            self.emit('keypress', unmarshall(text))
             
         }
         function navigate( key ){
@@ -6482,24 +6488,24 @@ function lineman(){
                     if( history.index > 0){
                         history.index--
                         text.buffer = history.buffer[history.index] || ''
-                        text.cursor.column = text.buffer.length
+                        text.index  = text.buffer.length
                     }
                     break;
                 case 'down':
                     if( history.index < history.buffer.length - 1){
                         history.index++
                         text.buffer = history.buffer[history.index]
-                        text.cursor.column = text.buffer.length
+                        text.index  = text.buffer.length
                     }
                     break;
                 case 'left':
-                    if( text.cursor.column > 0){
-                        text.cursor.column --
+                    if( text.index > 0){
+                        text.index --
                     }
                     break;
                 case 'right':
-                    if( text.cursor.column < text.buffer.length ){
-                        text.cursor.column ++
+                    if( text.index < text.buffer.length ){
+                        text.index ++
                     }
                     break;
                 case 'pageup':    
@@ -6519,14 +6525,14 @@ function lineman(){
         function edit( key ){
             switch( key.name ){
                 case 'delete':
-                    if(text.buffer.length > 0 && text.cursor.column >= 0){
-                        text.buffer = text.buffer.del(text.cursor.column + 1)
+                    if(text.buffer.length > 0 && text.indexn >= 0){
+                        text.buffer = text.buffer.del(text.index + 1)
                     }
                     break;
                 case 'backspace':
-                    if(text.buffer.length > 0 && text.cursor.column > 0){
-                        text.buffer = text.buffer.del(text.cursor.column)
-                        text.cursor.column--
+                    if(text.buffer.length > 0 && text.index > 0){
+                        text.buffer = text.buffer.del(text.index)
+                        text.index--
                     }
                     break;
                 case 'insert':
@@ -6534,14 +6540,33 @@ function lineman(){
             }
     
         }
-        
+        function unmarshall( object ){
+            return JSON.parse(JSON.stringify(object))
+        }
         self.setText    = function(txt){
-            text = JSON.parse(JSON.stringify(txt))
+            text = unmarshall( txt )
         } 
         self.getText    = function(){
-            return text
+            return unmarshall( text )
         }  
-        
+        self.mouseOn    = function(){
+            keypress.enableMouse(self.io)
+        }
+        self.mouseOff   = function(){
+            keypress.disableMouse(self.io)
+        }
+        self.getCursor  = function(){
+             keypress.getCursor(self.io)
+        }
+        self.setSize    = function(size){
+            self.columns = size.columns
+            self.rows    = size.rows
+            self.emit('resize',[self.columns, self.rows ])
+            //self.getCursor()
+        }
+        self.getSize    = function(){
+            return [self.columns, self.rows ]
+        }
         
     return self
 }
