@@ -133,7 +133,7 @@ function lineman(){
         function edit( key ){
             switch( key.name ){
                 case 'delete':
-                    if(text.buffer.length > 0 && text.indexn >= 0){
+                    if(text.buffer.length > 0 && text.index >= 0){
                         text.buffer = text.buffer.del(text.index + 1)
                     }
                     break;
