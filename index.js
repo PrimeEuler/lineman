@@ -7,73 +7,74 @@ String.prototype.del = function (idx) {
     return (this.slice(0, idx - 1) + this.slice(idx));
 };
 function lineman(){
-    var text    = {
+    var text        = {
         buffer:'',
         index:0
     }
-    var history = {
+    var history     = {
         buffer:[''],
         index:0
     }
-    var self    = new stream.Duplex({
+    var ldisc       = new stream.Duplex({
         objectMode:true,
         read:function(size){},
         write:function(chunk, encoding, callback){
-            if(self.io.push(chunk)){callback()}
+            if(ldisc.io.push(chunk)){callback()}
         }
     })
-        self.io = new stream.Duplex({
+        ldisc.io    = new stream.Duplex({
         objectMode:true,
         read:function(size){},
         write:function(chunk, encoding, callback){
-            if(self.push(chunk)){callback()}
+            if(ldisc.push(chunk)){callback()}
         }
     })
-        self.silent = false
-        keypress( self.io )
         
-        self.io.on('keypress',   keymap )
-        self.io.on('mousepress', function(info){
-            self.emit('mousepress',info)
+        
+        keypress( ldisc.io )
+        
+        ldisc.io.on('keypress',   keymap )
+        ldisc.io.on('mousepress', function(info){
+            ldisc.emit('mousepress',info)
         })
-        self.io.on('cursor',     function(info){
-            self.emit('cursor',info)
+        ldisc.io.on('cursor',     function(info){
+            ldisc.emit('cursor',info)
         })
         
+        //minimal line discipline
         function keymap( ch, key ){
+            //isRaw?return:null
             key = key || { name:'', sequence:'' };
             key.name = key.name || ''
             if( key.ctrl && key.shift ) {
-                self.emit( 'ctrl-shift',  key.name )
+                ldisc.emit( 'ctrl-shift',  key.name )
             }
             else if( key.ctrl ) {
-                self.emit( 'ctrl',  key )
+                ldisc.emit( 'ctrl',  key )
                 return
             }
             else if( key.meta ) {
-                self.emit( 'meta',  key )      
+                ldisc.emit( 'meta',  key )      
             }
-            else if( key.name.match(/^(up|down|left|right|pageup|pagedown|home|end)$/) ) {
+            else if( key.name.match(/^(up|down|left|right|pageup|pagedown|home|end|tab)$/) ) {
                 navigate( key )
-                self.emit('navigate', key )
+                ldisc.emit('navigate', key )
             }
-            else if( key.name.match(/^(delete|backspace|insert|tab)$/) ) {
+            else if( key.name.match(/^(delete|backspace|insert)$/) ) {
                 edit( key )
-                self.emit('edit', key )
+                ldisc.emit('edit', key )
             }
             else if( key.name.match(/^(enter|return)$/) ) {
-                
-                
-                if(text.buffer.length > 0 && self.silent===false){
+                if(text.buffer.length > 0 && ldisc.silent===false){
                     history.buffer.push(text.buffer);
                     history.index = history.buffer.length 
                 }
-                self.emit( 'crlf',  unmarshall(text) ) 
+                ldisc.emit( 'crlf',  unmarshall(text) ) 
                 text.buffer = '';
                 text.index = 0;
             }
             else if( key.sequence.indexOf('\u001b') ===0){
-                self.emit('csi', key )
+                ldisc.emit('csi', key )
             }else{
                 if(!ch){
                     if(key.sequence){
@@ -86,11 +87,12 @@ function lineman(){
                 text.buffer = text.buffer.splice(text.index,0,ch)
                 text.index += ch.length
             }
-            if(self.silent===false)
-            self.emit('keypress', unmarshall(text))
+            if(ldisc.silent===false)
+            ldisc.emit('keypress', unmarshall(text))
             
         }
         function navigate( key ){
+            
             switch( key.name ){
                 case 'up':
                     if( history.index > 0){
@@ -128,6 +130,8 @@ function lineman(){
                 case 'end': 
                     
                     break;
+                case 'tab':
+                    break;
             }
         }
         function edit( key ){
@@ -144,38 +148,44 @@ function lineman(){
                     }
                     break;
                 case 'insert':
-                case 'tab':
             }
     
         }
         function unmarshall( object ){
             return JSON.parse(JSON.stringify(object))
         }
-        self.setText    = function(txt){
+        
+        ldisc.silent    = false
+        ldisc.setText   = function(txt){
             text = unmarshall( txt )
+            if(text.index>text.buffer.length ){
+                text.index = text.buffer.length
+            }
+            if(ldisc.silent===false)
+            ldisc.emit('keypress', unmarshall(text))
         } 
-        self.getText    = function(){
+        ldisc.getText   = function(){
             return unmarshall( text )
         }  
-        self.mouseOn    = function(){
-            keypress.enableMouse(self.io)
+        ldisc.mouseOn   = function(){
+            keypress.enableMouse(ldisc.io)
         }
-        self.mouseOff   = function(){
-            keypress.disableMouse(self.io)
+        ldisc.mouseOff  = function(){
+            keypress.disableMouse(ldisc.io)
         }
-        self.getCursor  = function(){
-             keypress.getCursor(self.io)
+        ldisc.getCursor = function(){
+             keypress.getCursor(ldisc.io)
         }
-        self.setSize    = function(size){
-            self.columns = size.columns
-            self.rows    = size.rows
-            self.emit('resize',[self.columns, self.rows ])
-            //self.getCursor()
+        ldisc.setSize   = function(size){
+            ldisc.columns = size.columns
+            ldisc.rows    = size.rows
+            ldisc.emit('resize',[ldisc.columns, ldisc.rows ])
+            //ldisc.getCursor()
         }
-        self.getSize    = function(){
-            return [self.columns, self.rows ]
+        ldisc.getSize   = function(){
+            return [ldisc.columns, ldisc.rows ]
         }
         
-    return self
+    return ldisc
 }
 module.exports  = lineman
