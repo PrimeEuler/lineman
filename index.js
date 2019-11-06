@@ -29,7 +29,8 @@ function lineman(){
             if(ldisc.push(chunk)){callback()}
         }
     })
-        
+        ldisc.columns   = 80
+        ldisc.rows      = 24
         
         keypress( ldisc.io )
         
