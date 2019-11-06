@@ -1,0 +1,13 @@
+{
+  "name": "@primeeuler/lineman",
+  "description": "JavaScript line discipline.",
+  "author": "Jeremy Ebert",
+  "version": "0.0.1",
+  "dependencies": { },
+    "repository": {
+    "type": "git",
+    "url": "https://github.com/PrimeEuler/lineman.git"
+   },
+   "keywords": [ "readline", "line", "editor", "discipline","ldisc", "text" ],
+   "license": "MIT"
+}
