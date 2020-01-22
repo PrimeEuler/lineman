@@ -29,6 +29,7 @@ function lineman(){
             if(ldisc.push(chunk)){callback()}
         }
     })
+        ldisc.isRaw = false;
         ldisc.columns   = 80
         ldisc.rows      = 24
         
@@ -44,7 +45,7 @@ function lineman(){
         
         //minimal line discipline
         function keymap( ch, key ){
-            //isRaw?return:null
+            if(ldisc.isRaw===true){return}
             key = key || { name:'', sequence:'' };
             key.name = key.name || ''
             if( key.ctrl && key.shift ) {
