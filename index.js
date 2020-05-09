@@ -19,14 +19,18 @@ function lineman(){
         objectMode:true,
         read:function(size){},
         write:function(chunk, encoding, callback){
-            if(ldisc.io.push(chunk)){callback()}
+            //if(ldisc.io.push(chunk)){callback()}
+            ldisc.io.push(chunk)
+            callback()
         }
     })
         ldisc.io    = new stream.Duplex({
         objectMode:true,
         read:function(size){},
         write:function(chunk, encoding, callback){
-            if(ldisc.push(chunk)){callback()}
+            //if(ldisc.push(chunk)){callback()}
+            ldisc.push(chunk)
+            callback()
         }
     })
         ldisc.isRaw = false;
